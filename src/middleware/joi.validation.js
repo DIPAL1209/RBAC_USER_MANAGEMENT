@@ -12,7 +12,7 @@ const validate = (schema, property = "body") => {
       return response.error(res, message, 400);
     }
 
-    req[property] = value; // sanitized data
+    req[property] = value; 
     next();
   };
 };

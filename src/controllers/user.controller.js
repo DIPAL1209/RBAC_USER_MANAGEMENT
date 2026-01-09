@@ -1,5 +1,8 @@
 const db = require("../config/db");
 const response = require("../common/response");
+const { buildImageUrl } = require("../common/url.helper");
+const fs = require("fs");
+const path = require("path");
 
 
 exports.createUser = (req, res) => {
@@ -165,9 +168,6 @@ exports.assignRole = (req, res) => {
   const userId = req.params.id;
   const { role_id } = req.body;
 
-  if (!role_id) {
-    return response.error(res, "role_id is required", 400);
-  }
 
   db.query("SELECT * FROM users WHERE id = ?", [userId], (err, userRows) => {
     if (err) return response.error(res, "Database error", 500);
@@ -241,6 +241,14 @@ exports.uploadProfile = (req, res) => {
 
     const oldProfile = rows[0].profile;
 
+    // delete old file if exists
+    if (oldProfile) {
+      const oldPath = path.join("uploads", oldProfile);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
     db.query(
       "UPDATE users SET profile = ? WHERE id = ?",
       [fileName, userId],
@@ -254,6 +262,7 @@ exports.uploadProfile = (req, res) => {
         return response.success(res, message, {
           user_id: userId,
           profile: fileName,
+          profile_url: buildImageUrl(req, fileName)   // 🔥 full URL
         });
       }
     );
@@ -263,12 +272,24 @@ exports.uploadProfile = (req, res) => {
 exports.deleteprofile = (req, res) => {
   const userId = req.params.id;
 
-  db.query("UPDATE users SET profile = NULL WHERE id = ?", [userId], (err) => {
+  db.query("SELECT profile FROM users WHERE id = ?", [userId], (err, rows) => {
     if (err) return response.error(res, "Database error", 500);
 
-    return response.success(res, "Profile deleted successfully", {
-      user_id: userId,
-      profile: null,
+    const filename = rows[0]?.profile;
+
+    if (filename) {
+      const filePath = path.join("uploads", filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    db.query("UPDATE users SET profile = NULL WHERE id = ?", [userId], () => {
+      return response.success(res, "Profile deleted successfully", {
+        user_id: userId,
+        profile: null,
+        profile_url: null
+      });
     });
   });
 };
@@ -283,17 +304,21 @@ exports.getProfile = (req, res) => {
       if (err) return response.error(res, "Database error", 500);
       if (!rows.length) return response.error(res, "User not found", 404);
 
-      if (!rows[0].profile) {
+      const filename = rows[0].profile;
+
+      if (!filename) {
         return response.error(res, "Profile not uploaded", 404);
       }
 
       return response.success(res, "Profile fetched successfully", {
         user_id: rows[0].id,
-        profile: rows[0].profile,
+        profile: filename,
+        profile_url: buildImageUrl(req, filename)   // 🔥 full URL
       });
     }
   );
 };
+
 
 exports.combine = (req, res) => {
   const search = req.query.search || "";
@@ -304,29 +329,42 @@ exports.combine = (req, res) => {
   const limit = parseInt(req.query.limit) || 5;
   const offset = (page - 1) * limit;
 
-  const query = `
-    SELECT u.*, r.role_name
+  const countQuery = `
+    SELECT COUNT(*) AS total
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
     WHERE u.name LIKE ? OR u.email LIKE ?
-    ORDER BY ${sortBy} ${sortOrder}
-    LIMIT ? OFFSET ?
   `;
 
-  db.query(
-    query,
-    [`%${search}%`, `%${search}%`, limit, offset],
-    (err, rows) => {
-      if (err) return response.error(res, "Database error", 500);
+  db.query(countQuery, [`%${search}%`, `%${search}%`], (err, countResult) => {
+    if (err) return response.error(res, "Database error", 500);
 
-      return response.success(res, "Users fetched", {
-        page,
-        limit,
-        search,
-        sortBy,
-        sortOrder,
-        data: rows,
-      });
-    }
-  );
+    const totalRecords = countResult[0].total;
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    const dataQuery = `
+      SELECT u.*, r.role_name
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE u.name LIKE ? OR u.email LIKE ?
+      ORDER BY ${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+
+    db.query(
+      dataQuery,
+      [`%${search}%`, `%${search}%`, limit, offset],
+      (err, rows) => {
+        if (err) return response.error(res, "Database error", 500);
+
+        return response.success(res, "Users fetched", {
+          page,
+          limit,
+          totalRecords,
+          totalPages,
+          data: rows
+        });
+      }
+    );
+  });
 };

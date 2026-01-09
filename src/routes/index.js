@@ -2,34 +2,105 @@ const router = require("express").Router();
 
 const userController = require("../controllers/user.controller");
 const roleController = require("../controllers/role.controller");
-const upload = require("../middleware/upload");
 
+const upload = require("../middleware/upload");
 const validate = require("../middleware/joi.validation");
+
 const {
   createUserSchema,
   updateUserSchema,
+  assignRoleSchema,
+  userIdParamSchema,
+  searchFilterSchema,
 } = require("../validations/user.validation");
+
+const {
+  createRoleSchema,
+  updateRoleSchema,
+  roleIdParamSchema,
+} = require("../validations/role.validation");
+
+router.post(
+  "/users",
+  validate(createUserSchema, "body"),
+  userController.createUser
+);
+
+router.get("/users", userController.getUsers);
+
+router.get(
+  "/users/list/combine",
+  validate(searchFilterSchema, "query"),
+  userController.combine
+);
+
+router.get(
+  "/users/:id",
+  validate(userIdParamSchema, "params"),
+  userController.getUsersid
+);
+router.put(
+  "/users/:id",
+  validate(userIdParamSchema, "params"),
+  validate(updateUserSchema, "body"),
+  userController.updateUser
+);
+router.delete(
+  "/users/:id",
+  validate(userIdParamSchema, "params"),
+  userController.deleteUser
+);
+
+router.post(
+  "/users/:id/assign-role",
+  validate(userIdParamSchema, "params"),
+  validate(assignRoleSchema, "body"),
+  userController.assignRole
+);
 
 router.post(
   "/users/:id/upload-profile",
+  validate(userIdParamSchema, "params"),
   upload.single("profile"),
   userController.uploadProfile
 );
-router.delete("/users/:id/delete-profile", userController.deleteprofile);
+router.get(
+  "/users/:id/profile",
+  validate(userIdParamSchema, "params"),
+  userController.getProfile
+);
 
-router.post("/users", validate(createUserSchema), userController.createUser);
+router.delete(
+  "/users/:id/delete-profile",
+  validate(userIdParamSchema, "params"),
+  userController.deleteprofile
+);
 
-router.put("/users/:id", validate(updateUserSchema), userController.updateUser);
+router.post(
+  "/roles",
+  validate(createRoleSchema, "body"),
+  roleController.createRole
+);
 
-router.post("/users/:id/assign-role", userController.assignRole);
-
-router.get("/users", userController.getUsers);
-router.get("/users/list/combine", userController.combine);
-router.get("/users/:id", userController.getUsersid);
-router.delete("/users/:id", userController.deleteUser);
-
-router.post("/roles", roleController.createRole);
-router.put("/roles/:id", roleController.updateRole);
 router.get("/roles", roleController.getRoles);
+
+router.get(
+  "/roles/:id",
+  validate(roleIdParamSchema, "params"),
+  roleController.getRoleById
+);
+
+router.put(
+  "/roles/:id",
+  validate(roleIdParamSchema, "params"),
+  validate(updateRoleSchema, "body"),
+  roleController.updateRole
+);
+
+router.delete(
+  "/roles/:id",
+  validate(roleIdParamSchema, "params"),
+  roleController.deleteRole
+);
 
 module.exports = router;
