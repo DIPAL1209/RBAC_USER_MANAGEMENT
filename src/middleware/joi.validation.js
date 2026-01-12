@@ -16,5 +16,4 @@ const validate = (schema, property = "body") => {
     next();
   };
 };
-
 module.exports = validate;

@@ -204,7 +204,7 @@ exports.searchFilterSchema = Joi.object({
     }),
 
   sortBy: Joi.string()
-    .valid("u.id", "u.name", "u.email", "u.salary", "u.joining_date", "u.experience_years", "u.status")
+    .valid("id", "u.name", "u.email", "u.salary", "u.joining_date", "u.experience_years", "u.status")
     .optional()
     .default("u.id")
     .messages({

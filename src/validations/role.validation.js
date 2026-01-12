@@ -42,7 +42,6 @@ exports.updateRoleSchema = Joi.object({
     })
 });
 
-
 exports.roleIdParamSchema = Joi.object({
   id: Joi.number()
     .integer()
@@ -51,7 +50,7 @@ exports.roleIdParamSchema = Joi.object({
     .messages({
       "number.base": "Role ID must be a number",
       "number.positive": "Role ID must be positive",
-      "number.integer": "Role ID must be a whole number",
+      "number.integer": "Role ID must be a whole number", 
       "any.required": "Role ID is required"
     })
 });

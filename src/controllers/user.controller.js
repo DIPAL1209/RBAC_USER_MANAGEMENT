@@ -241,7 +241,7 @@ exports.uploadProfile = (req, res) => {
 
     const oldProfile = rows[0].profile;
 
-    // delete old file if exists
+    
     if (oldProfile) {
       const oldPath = path.join("uploads", oldProfile);
       if (fs.existsSync(oldPath)) {
@@ -262,12 +262,35 @@ exports.uploadProfile = (req, res) => {
         return response.success(res, message, {
           user_id: userId,
           profile: fileName,
-          profile_url: buildImageUrl(req, fileName)   // 🔥 full URL
+          profile_url: buildImageUrl(req, fileName)  
         });
       }
     );
   });
 };
+
+
+exports.uploadGallery = (req, res) => {
+  if (!req.files || !req.files.length) {
+    return response.error(res, "No files uploaded", 400);
+  }
+
+  const filenames = req.files.map(f => f.filename);
+
+  return response.success(res, "Gallery uploaded", {
+    total_files: filenames.length,
+    files: filenames
+  });
+};
+
+
+exports.testUpload = (req, res) => {
+  return response.success(res, "Files received", {
+    profile: req.files.profile?.[0]?.filename,
+    documents: req.files.documents?.map(f => f.filename)
+  });
+};
+
 
 exports.deleteprofile = (req, res) => {
   const userId = req.params.id;
@@ -284,7 +307,8 @@ exports.deleteprofile = (req, res) => {
       }
     }
 
-    db.query("UPDATE users SET profile = NULL WHERE id = ?", [userId], () => {
+    db.query("UPDATE users SET profile = NULL WHERE id = ?", [userId], (err , rows) => {
+      if (err) return response.error(res, "Database error", 500);
       return response.success(res, "Profile deleted successfully", {
         user_id: userId,
         profile: null,
@@ -306,19 +330,14 @@ exports.getProfile = (req, res) => {
 
       const filename = rows[0].profile;
 
-      if (!filename) {
-        return response.error(res, "Profile not uploaded", 404);
-      }
-
-      return response.success(res, "Profile fetched successfully", {
+      return response.success(res, "Profile fetched", {
         user_id: rows[0].id,
-        profile: filename,
-        profile_url: buildImageUrl(req, filename)   // 🔥 full URL
+        profile: filename || null,
+        profile_url: buildImageUrl(req, filename)
       });
     }
   );
 };
-
 
 exports.combine = (req, res) => {
   const search = req.query.search || "";
@@ -347,7 +366,7 @@ exports.combine = (req, res) => {
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.name LIKE ? OR u.email LIKE ?
-      ORDER BY ${sortBy} ${sortOrder}
+      ORDER BY ${sortBy} ${sortOrder}, u.id ASC
       LIMIT ? OFFSET ?
     `;
 
