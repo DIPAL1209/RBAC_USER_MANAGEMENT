@@ -1,10 +1,11 @@
 const router = require("express").Router();
-
+const checkRole = require("../middleware/checkRole");
 const userController = require("../controllers/user.controller");
 const roleController = require("../controllers/role.controller");
 
 const upload = require("../middleware/upload");
 const validate = require("../middleware/joi.validation");
+
 
 const {
   createUserSchema,
@@ -45,11 +46,22 @@ router.put(
   validate(updateUserSchema, "body"),
   userController.updateUser
 );
+
+// router.delete(
+//   "/users/:id",
+//   validate(userIdParamSchema, "params"),
+//   userController.deleteUser
+// );
+
+
+
 router.delete(
   "/users/:id",
   validate(userIdParamSchema, "params"),
+  checkRole("Admin"),
   userController.deleteUser
 );
+
 
 router.post(
   "/users/:id/assign-role",
@@ -87,12 +99,6 @@ router.post(
 router.post("/test-no-file", upload.none(), (req, res) => {
   return response.success(res, "Only form data received", req.body);
 });
-
-
-
-
-
-
 
 
 
@@ -134,5 +140,6 @@ router.delete(
   validate(roleIdParamSchema, "params"),
   roleController.deleteRole
 );
+
 
 module.exports = router;
