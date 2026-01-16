@@ -1,7 +1,8 @@
 const db = require("../config/db");
 const response = require("../common/response");
 
-exports.createRole = (req, res) => {
+exports.createRole = async (req, res) => {
+
   const { id, role_name } = req.body;
 
   db.query("SELECT id FROM roles WHERE id = ?", [id], (err, idRows) => {
@@ -124,3 +125,4 @@ exports.deleteRole = (req, res) => {
     );
   });
 };
+

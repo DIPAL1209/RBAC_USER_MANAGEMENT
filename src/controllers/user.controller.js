@@ -1,83 +1,76 @@
-const db = require("../config/db");
+const { User, Role } = require("../models/index");
+const { Op } = require("sequelize");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
 const fs = require("fs");
 const path = require("path");
 
+exports.createUser = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      role_id,
+      phone,
+      status,
+      salary,
+      joining_date,
+      experience_years,
+    } = req.body;
 
-exports.createUser = (req, res) => {
-  const {
-    name,
-    email,
-    role_id,
-    phone,
-    status,
-    salary,
-    joining_date,
-    experience_years,
-  } = req.body;
+    const role = await Role.findByPk(role_id);
+    if (!role) {
+      return response.error(res, "Invalid role_id", 400);
+    }
 
-  db.query("SELECT id FROM roles WHERE id = ?", [role_id], (err, rows) => {
-    if (err) return response.error(res, "Database error", 500);
-    if (!rows.length) return response.error(res, "Invalid role_id", 400);
+    const newUser = await User.create({
+      name,
+      email,
+      role_id,
+      phone: phone || null,
+      status,
+      salary: salary || null,
+      joining_date,
+      experience_years: experience_years || null,
+    });
 
-    db.query(
-      `INSERT INTO users 
-      (name, email, role_id, phone, status, salary, joining_date, experience_years)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name,
-        email,
-        role_id,
-        phone || null,
-        status,
-        salary || null,
-        joining_date,
-        experience_years || null,
-      ],
-      (err2, result) => {
-        if (err2) return response.error(res, "Database error", 500);
+    const userWithRole = await User.findByPk(newUser.id, {
+      include: {
+        model: Role,
+        as: "role",
+        attributes: ["id", "role_name"],
+      },
+    });
 
-        db.query(
-          `SELECT u.*, r.role_name
-           FROM users u
-           LEFT JOIN roles r ON r.id = u.role_id
-           WHERE u.id = ?`,
-          [result.insertId],
-          (err3, rows2) => {
-            if (err3) return response.error(res, "Database error", 500);
-
-            return response.success(
-              res,
-              "User created successfully",
-              rows2[0],
-              201
-            );
-          }
-        );
-      }
+    return response.success(
+      res,
+      "User created successfully",
+      userWithRole,
+      201
     );
-  });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
 };
 
-exports.updateUser = (req, res) => {
-  const userId = req.params.id;
-  const {
-    name,
-    email,
-    role_id,
-    phone,
-    status,
-    salary,
-    joining_date,
-    experience_years,
-  } = req.body;
+exports.updateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const {
+      name,
+      email,
+      role_id,
+      phone,
+      status,
+      salary,
+      joining_date,
+      experience_years,
+    } = req.body;
 
-  db.query("SELECT * FROM users WHERE id = ?", [userId], (err, rows) => {
-    if (err) return response.error(res, "Database error", 500);
-    if (!rows.length) return response.error(res, "User not found", 404);
-
-    const user = rows[0];
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
 
     const updatedData = {
       name: name || user.name,
@@ -93,155 +86,138 @@ exports.updateUser = (req, res) => {
           : user.experience_years,
     };
 
-    db.query(
-      `UPDATE users 
-       SET name = ?, email = ?, role_id = ?, phone = ?, status = ?, 
-           salary = ?, joining_date = ?, experience_years = ?
-       WHERE id = ?`,
-      [
-        updatedData.name,
-        updatedData.email,
-        updatedData.role_id,
-        updatedData.phone,
-        updatedData.status,
-        updatedData.salary,
-        updatedData.joining_date,
-        updatedData.experience_years,
-        userId,
-      ],
-      (err2) => {
-        if (err2) return response.error(res, "Database error", 500);
-
-        db.query(
-          `SELECT u.*, r.role_name
-           FROM users u
-           LEFT JOIN roles r ON r.id = u.role_id
-           WHERE u.id = ?`,
-          [userId],
-          (err3, result) => {
-            if (err3) return response.error(res, "Database error", 500);
-
-            return response.success(
-              res,
-              "User updated successfully",
-              result[0]
-            );
-          }
-        );
-      }
-    );
-  });
-};
-
-exports.getUsers = (req, res) => {
-  db.query(
-    `SELECT u.*, r.role_name
-     FROM users u
-     LEFT JOIN roles r ON u.role_id = r.id`,
-    (err, rows) => {
-      if (err) return response.error(res, "Database error", 500);
-
-      return response.success(res, "Users fetched successfully", rows);
-    }
-  );
-};
-
-exports.getUsersid = (req, res) => {
-  const userId = req.params.id;
-  db.query(
-    `SELECT u.*, r.role_name
-     FROM users u
-     LEFT JOIN roles r ON u.role_id = r.id
-     WHERE u.id =?`,
-    [userId],
-    (err, rows) => {
-      if (err) return response.error(res, "Database error", 500);
-      if (!rows.length) return response.error(res, "User not found", 404);
-
-      return response.success(res, "Users fetched successfully", rows);
-    }
-  );
-};
-
-
-exports.assignRole = (req, res) => {
-  const userId = req.params.id;
-  const { role_id } = req.body;
-
-
-  db.query("SELECT * FROM users WHERE id = ?", [userId], (err, userRows) => {
-    if (err) return response.error(res, "Database error", 500);
-    if (!userRows.length) return response.error(res, "User not found", 404);
-
-    db.query(
-      "SELECT * FROM roles WHERE id = ?",
-      [role_id],
-      (err2, roleRows) => {
-        if (err2) return response.error(res, "Database error", 500);
-        if (!roleRows.length)
-          return response.error(res, "Invalid role_id", 400);
-
-        db.query(
-          "UPDATE users SET role_id = ? WHERE id = ?",
-          [role_id, userId],
-          (err3) => {
-            if (err3) return response.error(res, "Database error", 500);
-
-            db.query(
-              `SELECT u.id AS user_id, u.name AS user_name,
-                    u.role_id, r.role_name
-             FROM users u
-             LEFT JOIN roles r ON r.id = u.role_id
-             WHERE u.id = ?`,
-              [userId],
-              (err4, rows) => {
-                if (err4) return response.error(res, "Database error", 500);
-
-                return response.success(
-                  res,
-                  "Role updated successfully",
-                  rows[0]
-                );
-              }
-            );
-          }
-        );
-      }
-    );
-  });
-};
-
-exports.deleteUser = (req, res) => {
-  const userId = req.params.id;
-
-  db.query("SELECT * FROM users WHERE id = ?", [userId], (err, rows) => {
-    if (err) return response.error(res, "Database error", 500);
-    if (!rows.length) return response.error(res, "User not found", 404);
-
-    db.query("DELETE FROM users WHERE id = ?", [userId], (err2) => {
-      if (err2) return response.error(res, "Database error", 500);
-
-      return response.success(res, "User deleted successfully");
+    await User.update(updatedData, {
+      where: { id: userId },
     });
-  });
+
+    const updatedUser = await User.findByPk(userId, {
+      include: {
+        model: Role,
+        as: "role",
+        attributes: ["id", "role_name"],
+      },
+    });
+
+    return response.success(res, "User updated successfully", updatedUser);
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
 };
 
-exports.uploadProfile = (req, res) => {
-  const userId = req.params.id;
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      include: {
+        model: Role,
+        as: "role",
+        attributes: ["id", "role_name"],
+      },
+    });
 
-  if (!req.file) {
-    return response.error(res, "No file uploaded", 400);
+    return response.success(res, "Users fetched successfully", users);
+  } catch (error) {
+    return response.error(res, "Database error", 500);
   }
+};
 
-  const fileName = req.file.filename;
+exports.getUsersid = async (req, res) => {
+  try {
+    const userId = req.params.id;
 
-  db.query("SELECT profile FROM users WHERE id = ?", [userId], (err, rows) => {
-    if (err) return response.error(res, "Database error", 500);
-    if (!rows.length) return response.error(res, "User not found", 404);
+    const user = await User.findByPk(userId, {
+      include: {
+        model: Role,
+        as: "role",
+        attributes: ["id", "role_name"],
+      },
+    });
 
-    const oldProfile = rows[0].profile;
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
 
-    
+    return response.success(res, "Users fetched successfully", [user]);
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.assignRole = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { role_id } = req.body;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    const role = await Role.findByPk(role_id);
+    if (!role) {
+      return response.error(res, "Invalid role_id", 400);
+    }
+
+    await User.update({ role_id }, { where: { id: userId } });
+
+    const updatedUser = await User.findByPk(userId, {
+      attributes: ["id", "name", "role_id"],
+      include: {
+        model: Role,
+        as: "role",
+        attributes: ["id", "role_name"],
+      },
+    });
+
+    const result = {
+      user_id: updatedUser.id,
+      user_name: updatedUser.name,
+      role_id: updatedUser.role_id,
+      role_name: updatedUser.role.role_name,
+    };
+
+    return response.success(res, "Role updated successfully", result);
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    await User.destroy({ where: { id: userId } });
+
+    return response.success(res, "User deleted successfully");
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.uploadProfile = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!req.file) {
+      return response.error(res, "No file uploaded", 400);
+    }
+
+    const fileName = req.file.filename;
+
+    const user = await User.findByPk(userId, {
+      attributes: ["id", "profile"],
+    });
+
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    const oldProfile = user.profile;
+
     if (oldProfile) {
       const oldPath = path.join("uploads", oldProfile);
       if (fs.existsSync(oldPath)) {
@@ -249,56 +225,49 @@ exports.uploadProfile = (req, res) => {
       }
     }
 
-    db.query(
-      "UPDATE users SET profile = ? WHERE id = ?",
-      [fileName, userId],
-      (err2) => {
-        if (err2) return response.error(res, "Database error", 500);
+    await User.update({ profile: fileName }, { where: { id: userId } });
 
-        const message = oldProfile
-          ? "Profile updated successfully"
-          : "Profile uploaded successfully";
+    const message = oldProfile
+      ? "Profile updated successfully"
+      : "Profile uploaded successfully";
 
-        return response.success(res, message, {
-          user_id: userId,
-          profile: fileName,
-          profile_url: buildImageUrl(req, fileName)  
-        });
-      }
-    );
-  });
+    return response.success(res, message, {
+      user_id: userId,
+      profile: fileName,
+      profile_url: buildImageUrl(req, fileName),
+    });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
 };
-
 
 exports.uploadGallery = (req, res) => {
   if (!req.files || !req.files.length) {
     return response.error(res, "No files uploaded", 400);
   }
 
-  const filenames = req.files.map(f => f.filename);
+  const filenames = req.files.map((f) => f.filename);
 
   return response.success(res, "Gallery uploaded", {
     total_files: filenames.length,
-    files: filenames
+    files: filenames,
   });
 };
 
 
-exports.testUpload = (req, res) => {
-  return response.success(res, "Files received", {
-    profile: req.files.profile?.[0]?.filename,
-    documents: req.files.documents?.map(f => f.filename)
-  });
-};
+exports.deleteprofile = async (req, res) => {
+  try {
+    const userId = req.params.id;
 
+    const user = await User.findByPk(userId, {
+      attributes: ["id", "profile"],
+    });
 
-exports.deleteprofile = (req, res) => {
-  const userId = req.params.id;
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
 
-  db.query("SELECT profile FROM users WHERE id = ?", [userId], (err, rows) => {
-    if (err) return response.error(res, "Database error", 500);
-
-    const filename = rows[0]?.profile;
+    const filename = user.profile;
 
     if (filename) {
       const filePath = path.join("uploads", filename);
@@ -307,36 +276,40 @@ exports.deleteprofile = (req, res) => {
       }
     }
 
-    db.query("UPDATE users SET profile = NULL WHERE id = ?", [userId], (err , rows) => {
-      if (err) return response.error(res, "Database error", 500);
-      return response.success(res, "Profile deleted successfully", {
-        user_id: userId,
-        profile: null,
-        profile_url: null
-      });
+    await User.update({ profile: null }, { where: { id: userId } });
+
+    return response.success(res, "Profile deleted successfully", {
+      user_id: userId,
+      profile: null,
+      profile_url: null,
     });
-  });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
 };
 
-exports.getProfile = (req, res) => {
-  const userId = req.params.id;
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.params.id;
 
-  db.query(
-    "SELECT id, profile FROM users WHERE id = ?",
-    [userId],
-    (err, rows) => {
-      if (err) return response.error(res, "Database error", 500);
-      if (!rows.length) return response.error(res, "User not found", 404);
+    const user = await User.findByPk(userId, {
+      attributes: ["id", "profile"],
+    });
 
-      const filename = rows[0].profile;
-
-      return response.success(res, "Profile fetched", {
-        user_id: rows[0].id,
-        profile: filename || null,
-        profile_url: buildImageUrl(req, filename)
-      });
+    if (!user) {
+      return response.error(res, "User not found", 404);
     }
-  );
+
+    const filename = user.profile;
+
+    return response.success(res, "Profile fetched", {
+      user_id: user.id,
+      profile: filename || null,
+      profile_url: buildImageUrl(req, filename),
+    });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
 };
 
 exports.combine = (req, res) => {
