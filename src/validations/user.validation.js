@@ -206,7 +206,7 @@ exports.searchFilterSchema = Joi.object({
   sortBy: Joi.string()
     .valid("id", "u.name", "u.email", "u.salary", "u.joining_date", "u.experience_years", "u.status")
     .optional()
-    .default("u.id")
+    .default("id")
     .messages({
       "any.only": "Invalid sort field. Allowed: id, name, email, salary, joining_date, experience_years, status"
     }),

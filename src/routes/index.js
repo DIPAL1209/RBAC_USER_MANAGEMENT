@@ -86,19 +86,19 @@ router.post(
   userController.uploadGallery
 );
 
-router.post(
-  "/test-upload",
-  upload.fields([
-    { name: "profile", maxCount: 1 },
-    { name: "documents", maxCount: 3 }
-  ]),
-  userController.testUpload
-);
+// router.post(
+//   "/test-upload",
+//   upload.fields([
+//     { name: "profile", maxCount: 1 },
+//     { name: "documents", maxCount: 3 }
+//   ]),
+//   userController.testUpload
+// );
 
 
-router.post("/test-no-file", upload.none(), (req, res) => {
-  return response.success(res, "Only form data received", req.body);
-});
+// router.post("/test-no-file", upload.none(), (req, res) => {
+//   return response.success(res, "Only form data received", req.body);
+// });
 
 
 

@@ -1,5 +1,5 @@
 const { User, Role } = require("../models/index");
-const { Op } = require("sequelize");
+const { Op, fn } = require("sequelize");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
 const fs = require("fs");
@@ -110,7 +110,8 @@ exports.getUsers = async (req, res) => {
       include: {
         model: Role,
         as: "role",
-        attributes: ["id", "role_name"],
+        attributes: ["id", ["role_name"]],
+        
       },
     });
 
@@ -283,7 +284,7 @@ exports.deleteprofile = async (req, res) => {
       profile: null,
       profile_url: null,
     });
-  } catch (error) {
+  } catch (error) {   
     return response.error(res, "Database error", 500);
   }
 };
@@ -312,51 +313,50 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-exports.combine = (req, res) => {
-  const search = req.query.search || "";
-  const sortBy = req.query.sortBy || "u.id";
-  const sortOrder = req.query.sortOrder === "desc" ? "DESC" : "ASC";
+exports.combine = async (req, res) => {
+  try {
+    const search = req.query.search || "";
+    const sortBy = req.query.sortBy || "";
+    const sortOrder = req.query.sortOrder === "desc" ? "DESC" : "ASC";
 
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 5;
-  const offset = (page - 1) * limit;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const offset = (page - 1) * limit;
 
-  const countQuery = `
-    SELECT COUNT(*) AS total
-    FROM users u
-    LEFT JOIN roles r ON u.role_id = r.id
-    WHERE u.name LIKE ? OR u.email LIKE ?
-  `;
+    const whereCondition = {
+      [Op.or]: [
+        { name: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } },
+      ],  
+    };
 
-  db.query(countQuery, [`%${search}%`, `%${search}%`], (err, countResult) => {
-    if (err) return response.error(res, "Database error", 500);
+    const totalRecords = await User.count({
+      where: whereCondition,
+    });
 
-    const totalRecords = countResult[0].total;
     const totalPages = Math.ceil(totalRecords / limit);
 
-    const dataQuery = `
-      SELECT u.*, r.role_name
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      WHERE u.name LIKE ? OR u.email LIKE ?
-      ORDER BY ${sortBy} ${sortOrder}, u.id ASC
-      LIMIT ? OFFSET ?
-    `;
+    const users = await User.findAll({
+      where: whereCondition,
+      order: [
+        [sortBy, sortOrder],
+        ["id", "ASC"],
+      ],
+      limit: limit,
+      offset: offset,
+    });
 
-    db.query(
-      dataQuery,
-      [`%${search}%`, `%${search}%`, limit, offset],
-      (err, rows) => {
-        if (err) return response.error(res, "Database error", 500);
-
-        return response.success(res, "Users fetched", {
-          page,
-          limit,
-          totalRecords,
-          totalPages,
-          data: rows
-        });
-      }
-    );
-  });
+    return response.success(res, "Users fetched", {
+      page,
+      limit,
+      totalRecords,
+      totalPages,
+      sortBy, 
+      sortOrder,
+      search,
+      data: users,
+    });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
 };
