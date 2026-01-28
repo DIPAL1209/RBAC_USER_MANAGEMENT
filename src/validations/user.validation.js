@@ -204,17 +204,27 @@ exports.searchFilterSchema = Joi.object({
     }),
 
   sortBy: Joi.string()
-    .valid("id", "u.name", "u.email", "u.salary", "u.joining_date", "u.experience_years", "u.status")
+    .valid(
+      "id", 
+      "name", 
+      "email", 
+      "salary", 
+      "joining_date", 
+      "experience_years", 
+      "status",
+      "createdAt",
+      "updatedAt"
+    )
     .optional()
-    .default("id")
+    .default("createdAt")
     .messages({
-      "any.only": "Invalid sort field. Allowed: id, name, email, salary, joining_date, experience_years, status"
+      "any.only": "Invalid sort field. Allowed: id, name, email, salary, joining_date, experience_years, status, createdAt, updatedAt"
     }),
 
   sortOrder: Joi.string()
     .valid("asc", "desc")
     .optional()
-    .default("asc")
+    .default("desc")
     .messages({
       "any.only": "Sort order must be 'asc' or 'desc'"
     }),
@@ -239,14 +249,19 @@ exports.searchFilterSchema = Joi.object({
       "number.min": "Limit must be at least 1",
       "number.max": "Limit cannot exceed 100",
       "number.base": "Limit must be a number"
-    })
+    }),
 
+  date: Joi.string()
+    .optional()
+    .messages({
+      "string.base": "Date must be a string"
+    })
 });
 
 exports.getAllUsersSchema = Joi.object({
   page: Joi.number().integer().min(1).optional(),
   limit: Joi.number().integer().min(1).max(100).optional(),
   status: Joi.string().valid("active", "inactive").optional(),
-  sortBy: Joi.string().valid("id", "name", "email").optional(),
+  sortBy: Joi.string().valid("id", "name", "email", "createdAt", "updatedAt").optional(),
   sortOrder: Joi.string().valid("ASC", "DESC", "asc", "desc").optional(),
 });

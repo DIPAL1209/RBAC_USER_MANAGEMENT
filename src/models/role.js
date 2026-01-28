@@ -14,9 +14,10 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     {
-      tableName: "roles",
-      timestamps: false,
-    }
+  tableName: "roles",
+  timestamps: true,
+  underscored: true
+}
   );
 
   Role.associate = (models) => {

@@ -48,10 +48,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
     },
-    {
-      tableName: "users",
-      timestamps: false,
-    }
+   {
+  tableName: "users",
+  timestamps: true,
+  underscored: true
+}
   );
 
  User.associate = (models) => {

@@ -1,7 +1,8 @@
 const { User, Role, Address, Project } = require("../models");
-const { Op, fn } = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
+const applyDateFilter = require("../common/dateFilter");
 const fs = require("fs");
 const path = require("path");
 
@@ -344,48 +345,73 @@ exports.getProfile = async (req, res) => {
 
 exports.combine = async (req, res) => {
   try {
-    const search = req.query.search || "";
-    const sortBy = req.query.sortBy || "id";
-    const sortOrder = req.query.sortOrder === "desc" ? "DESC" : "ASC";
+    console.log("🔥 COMBINE API HIT 🔥");
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
+    const {
+      search = "",
+      sortBy = "created_at",
+      sortOrder = "desc",
+      page = 1,
+      limit = 5
+    } = req.query;
+
     const offset = (page - 1) * limit;
 
-    const whereCondition = {
-      [Op.or]: [
+    let whereCondition = {};
+
+    // 🔍 SEARCH
+    if (search) {
+      whereCondition[Op.or] = [
         { name: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } },
-      ],
+        { phone: { [Op.like]: `%${search}%` } }
+      ];
+    }
+
+    const dateCondition = applyDateFilter(req.query);
+    if (dateCondition) {
+      whereCondition[Op.and] = whereCondition[Op.and] 
+        ? [...whereCondition[Op.and], dateCondition]
+        : [dateCondition];
+    }
+
+    const sortFieldMap = {
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at',
+      'name': 'name',
+      'email': 'email',
+      'salary': 'salary',
+      'joining_date': 'joining_date',
+      'experience_years': 'experience_years',
+      'status': 'status',
+      'id': 'id'
     };
+
+    const actualSortField = sortFieldMap[sortBy] || 'created_at';
 
     const { count, rows } = await User.findAndCountAll({
       where: whereCondition,
-      order: [
-        [sortBy, sortOrder],
-        ["id", "ASC"],
+      include: [
+        { model: Role, as: "role", required: false },
+        { model: Address, as: "addresses", required: false }
       ],
-      limit,
-      offset,
+      order: [[actualSortField, sortOrder.toUpperCase()]],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
     });
 
-    const totalPages = Math.ceil(count / limit);
-
-    return response.success(res, "Users fetched", {
-      page,
-      limit,
+    return response.success(res, "Users fetched successfully", {
+      page: parseInt(page),
+      limit: parseInt(limit),
       totalRecords: count,
-      totalPages,
-      sortBy,
-      sortOrder,
-      search,
-      data: rows,
+      totalPages: Math.ceil(count / limit),
+      data: rows
     });
   } catch (error) {
-    return response.error(res, "Database error", 500);
+    console.error("COMBINE ERROR:", error);
+    return response.error(res, error.message, 500);
   }
 };
-
 
 exports.getAllusers = async (req, res) => {
   try {
