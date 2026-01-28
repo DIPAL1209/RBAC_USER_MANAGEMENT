@@ -13,7 +13,10 @@ const {
   assignRoleSchema,
   userIdParamSchema,
   searchFilterSchema,
+  getAllUsersSchema ,
 } = require("../validations/user.validation");
+
+console.log("getAllUsersSchema:", getAllUsersSchema);
 
 const {
   createRoleSchema,
@@ -74,32 +77,8 @@ router.post(
   "/users/:id/upload-profile",
   validate(userIdParamSchema, "params"),
   upload.single("profile"),
-  (err, req, res, next) => {
-    return response.error(res, err.message, 400);
-  },
   userController.uploadProfile
 );
-
-router.post(
-  "/users/:id/upload-gallery",
-  upload.array("images", 10),
-  userController.uploadGallery
-);
-
-// router.post(
-//   "/test-upload",
-//   upload.fields([
-//     { name: "profile", maxCount: 1 },
-//     { name: "documents", maxCount: 3 }
-//   ]),
-//   userController.testUpload
-// );
-
-
-// router.post("/test-no-file", upload.none(), (req, res) => {
-//   return response.success(res, "Only form data received", req.body);
-// });
-
 
 
 router.get(
@@ -139,6 +118,13 @@ router.delete(
   "/roles/:id",
   validate(roleIdParamSchema, "params"),
   roleController.deleteRole
+);
+
+
+router.get(
+  "/Allusers",
+  validate(getAllUsersSchema, "query"),
+  userController.getAllusers
 );
 
 

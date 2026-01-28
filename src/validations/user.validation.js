@@ -240,4 +240,13 @@ exports.searchFilterSchema = Joi.object({
       "number.max": "Limit cannot exceed 100",
       "number.base": "Limit must be a number"
     })
+
+});
+
+exports.getAllUsersSchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional(),
+  status: Joi.string().valid("active", "inactive").optional(),
+  sortBy: Joi.string().valid("id", "name", "email").optional(),
+  sortOrder: Joi.string().valid("ASC", "DESC", "asc", "desc").optional(),
 });

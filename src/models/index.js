@@ -1,16 +1,27 @@
-const User = require("./user");
-const Role = require("./role");
+const { Sequelize, DataTypes } = require("sequelize");
+const sequelize = require("../config/sequelize");
 
-db.Xyz = require("./xyz")(sequelize, Sequelize.DataTypes);
 
-User.belongsTo(Role, {
-  foreignKey: "role_id",
-  as: "role"
+const models = {};
+
+
+models.Role = require("./role")(sequelize, DataTypes);
+models.User = require("./user")(sequelize, DataTypes);
+models.Xyz  = require("./xyz")(sequelize, DataTypes);
+models.Address = require("./address")(sequelize, DataTypes);
+models.Project = require("./project")(sequelize, DataTypes);
+
+
+
+
+Object.values(models).forEach((model) => {
+  if (model.associate) {
+    model.associate(models);
+  }
 });
 
-Role.hasMany(User, {
-  foreignKey: "role_id",
-  as: "users"
-});
 
-module.exports = { User, Role };
+models.sequelize = sequelize;
+models.Sequelize = Sequelize;
+
+module.exports = models;

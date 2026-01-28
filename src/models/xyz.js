@@ -7,12 +7,10 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         autoIncrement: true,
       },
-
       title: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-
       isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

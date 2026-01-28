@@ -1,4 +1,4 @@
-const { User, Role } = require("../models/index");
+const { User, Role, Address, Project } = require("../models");
 const { Op, fn } = require("sequelize");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
@@ -107,41 +107,70 @@ exports.updateUser = async (req, res) => {
 exports.getUsers = async (req, res) => {
   try {
     const users = await User.findAll({
-      include: {
-        model: Role,
-        as: "role",
-        attributes: ["id", ["role_name"]],
-        
-      },
+      include: [
+        {
+          model: Role,
+          as: "role",
+          attributes: ["id", "role_name"]
+        },
+        {
+          model: Address,
+          as: "addresses",
+          include: [
+            {
+              model: Project,
+              as: "projects",
+           attributes: ["id", "title"]
+            }
+          ]
+        }
+      ]
     });
 
     return response.success(res, "Users fetched successfully", users);
   } catch (error) {
+    console.error(error);
     return response.error(res, "Database error", 500);
   }
 };
+
 
 exports.getUsersid = async (req, res) => {
   try {
     const userId = req.params.id;
 
     const user = await User.findByPk(userId, {
-      include: {
-        model: Role,
-        as: "role",
-        attributes: ["id", "role_name"],
-      },
+      include: [
+        {
+          model: Role,
+          as: "role",
+          attributes: ["id", "role_name"]
+        },
+        {
+          model: Address,
+          as: "addresses",
+          include: [
+            {
+              model: Project,
+              as: "projects"
+            }
+          ]
+        }
+      ]
     });
 
     if (!user) {
       return response.error(res, "User not found", 404);
     }
 
-    return response.success(res, "Users fetched successfully", [user]);
+   
+    return response.success(res, "User fetched successfully", [user]);
   } catch (error) {
+    console.error(error);
     return response.error(res, "Database error", 500);
   }
 };
+
 
 exports.assignRole = async (req, res) => {
   try {
@@ -316,7 +345,7 @@ exports.getProfile = async (req, res) => {
 exports.combine = async (req, res) => {
   try {
     const search = req.query.search || "";
-    const sortBy = req.query.sortBy || "";
+    const sortBy = req.query.sortBy || "id";
     const sortOrder = req.query.sortOrder === "desc" ? "DESC" : "ASC";
 
     const page = parseInt(req.query.page) || 1;
@@ -327,36 +356,85 @@ exports.combine = async (req, res) => {
       [Op.or]: [
         { name: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } },
-      ],  
+      ],
     };
 
-    const totalRecords = await User.count({
-      where: whereCondition,
-    });
-
-    const totalPages = Math.ceil(totalRecords / limit);
-
-    const users = await User.findAll({
+    const { count, rows } = await User.findAndCountAll({
       where: whereCondition,
       order: [
         [sortBy, sortOrder],
         ["id", "ASC"],
       ],
-      limit: limit,
-      offset: offset,
+      limit,
+      offset,
     });
+
+    const totalPages = Math.ceil(count / limit);
 
     return response.success(res, "Users fetched", {
       page,
       limit,
-      totalRecords,
+      totalRecords: count,
       totalPages,
-      sortBy, 
+      sortBy,
       sortOrder,
       search,
-      data: users,
+      data: rows,
     });
   } catch (error) {
     return response.error(res, "Database error", 500);
+  }
+};
+
+
+exports.getAllusers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      where: { status: "active" },
+
+      include: [
+        {
+          model: Role,
+          as: "role",
+          required: false,
+          include: [
+            {
+              model: RolePermission,
+              as: "permissions",
+              where: { status: "active" },
+              required: false,
+            },
+          ],
+        },
+        {
+          model: UserProfile,
+          as: "profile",
+          required: false,
+        },
+      ],
+
+      order: [
+        ["id", "ASC"],
+        [{ model: Role, as: "role" }, "id", "ASC"],
+        [
+          { model: Role, as: "role" },
+          { model: RolePermission, as: "permissions" },
+          "id",
+          "ASC",
+        ],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Users with hierarchy fetched",
+      data: users,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
