@@ -23,47 +23,27 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      profile: {
-        type: DataTypes.STRING(500),
-        allowNull: true,
-      },
-      phone: {
-        type: DataTypes.STRING(15),
-        allowNull: true,
-      },
       status: {
         type: DataTypes.ENUM("active", "inactive"),
         defaultValue: "active",
       },
-      salary: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0.0,
-      },
-      experience_years: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-      joining_date: {
-        type: DataTypes.DATEONLY,
-        allowNull: true,
-      },
     },
-   {
-  tableName: "users",
-  timestamps: true,
-  underscored: true
-}
+    {
+      tableName: "users",
+      timestamps: true,
+      underscored: true,
+    }
   );
 
- User.associate = (models) => {
+  User.associate = (models) => {
     User.belongsTo(models.Role, {
       foreignKey: "role_id",
-      as: "role"
+      as: "role",
     });
 
-    User.hasMany(models.Address, {
+    User.hasOne(models.UserProfile, {
       foreignKey: "user_id",
-      as: "addresses"
+      as: "profile",
     });
   };
 

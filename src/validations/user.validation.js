@@ -82,6 +82,27 @@ exports.createUserSchema = Joi.object({
       "number.min": "Experience cannot be negative",
       "number.max": "Experience cannot exceed 50 years",
       "number.integer": "Experience must be a whole number"
+    }),
+
+  // ✅ FIX: Add addresses validation
+  addresses: Joi.array()
+    .items(
+      Joi.object({
+        city: Joi.string()
+          .min(2)
+          .max(255)
+          .trim()
+          .required()
+          .messages({
+            "string.min": "City name must be at least 2 characters",
+            "string.max": "City name cannot exceed 255 characters",
+            "any.required": "City is required in address"
+          })
+      })
+    )
+    .optional()
+    .messages({
+      "array.base": "Addresses must be an array"
     })
 });
 
