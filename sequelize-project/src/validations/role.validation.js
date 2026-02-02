@@ -1,16 +1,6 @@
 const Joi = require("joi");
 
 exports.createRoleSchema = Joi.object({
-  id: Joi.number()
-    .integer()
-    .positive()
-    .required()
-    .messages({
-      "number.base": "Role ID must be a number",
-      "number.positive": "Role ID must be positive",
-      "number.integer": "Role ID must be a whole number",
-      "any.required": "Role ID is required"
-    }),
 
   role_name: Joi.string()
     .min(2)
@@ -54,3 +44,6 @@ exports.roleIdParamSchema = Joi.object({
       "any.required": "Role ID is required"
     })
 });
+
+
+

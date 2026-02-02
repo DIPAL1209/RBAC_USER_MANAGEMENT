@@ -1,11 +1,9 @@
 const router = require("express").Router();
-const checkRole = require("../middleware/checkRole");
-const userController = require("../controllers/user.controller");
-const roleController = require("../controllers/role.controller");
 
+const userController = require("../controllers/user.controller");
+const checkRole = require("../middleware/checkRole");
 const upload = require("../middleware/upload");
 const validate = require("../middleware/joi.validation");
-
 
 const {
   createUserSchema,
@@ -13,119 +11,74 @@ const {
   assignRoleSchema,
   userIdParamSchema,
   searchFilterSchema,
-  getAllUsersSchema ,
+  getAllUsersSchema,
 } = require("../validations/user.validation");
 
-console.log("getAllUsersSchema:", getAllUsersSchema);
-
-const {
-  createRoleSchema,
-  updateRoleSchema,
-  roleIdParamSchema,
-} = require("../validations/role.validation");
-
 router.post(
-  "/users",
+  "/",
   validate(createUserSchema, "body"),
   userController.createUser
 );
 
-router.get("/users", userController.getUsers);
+
+router.get("/", userController.getUsers);
 
 router.get(
-  "/users/list/combine",
+  "/list/combine",
   validate(searchFilterSchema, "query"),
   userController.combine
 );
 
 router.get(
-  "/users/:id",
+  "/:id",
   validate(userIdParamSchema, "params"),
   userController.getUsersid
 );
+
 router.put(
-  "/users/:id",
+  "/:id",
   validate(userIdParamSchema, "params"),
   validate(updateUserSchema, "body"),
   userController.updateUser
 );
 
-// router.delete(
-//   "/users/:id",
-//   validate(userIdParamSchema, "params"),
-//   userController.deleteUser
-// );
-
-
-
 router.delete(
-  "/users/:id",
+  "/:id",
   validate(userIdParamSchema, "params"),
   checkRole("Admin"),
   userController.deleteUser
 );
 
-
 router.post(
-  "/users/:id/assign-role",
+  "/:id/assign-role",
   validate(userIdParamSchema, "params"),
   validate(assignRoleSchema, "body"),
   userController.assignRole
 );
 
 router.post(
-  "/users/:id/upload-profile",
+  "/:id/upload-profile",
   validate(userIdParamSchema, "params"),
   upload.single("profile"),
   userController.uploadProfile
 );
 
-
 router.get(
-  "/users/:id/profile",
+  "/:id/profile",
   validate(userIdParamSchema, "params"),
   userController.getProfile
 );
 
 router.delete(
-  "/users/:id/delete-profile",
+  "/:id/delete-profile",
   validate(userIdParamSchema, "params"),
   userController.deleteprofile
 );
 
-router.post(
-  "/roles",
-  validate(createRoleSchema, "body"),
-  roleController.createRole
-);
-
-router.get("/roles", roleController.getRoles);
-
 router.get(
-  "/roles/:id",
-  validate(roleIdParamSchema, "params"),
-  roleController.getRoleById
-);
-
-router.put(
-  "/roles/:id",
-  validate(roleIdParamSchema, "params"),
-  validate(updateRoleSchema, "body"),
-  roleController.updateRole
-);
-
-router.delete(
-  "/roles/:id",
-  validate(roleIdParamSchema, "params"),
-  roleController.deleteRole
-);
-
-
-router.get(
-  "/Allusers",
+  "/all",
   validate(getAllUsersSchema, "query"),
   userController.getAllusers
 );
-
 
 module.exports = router;

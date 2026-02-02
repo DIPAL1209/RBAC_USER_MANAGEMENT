@@ -1,5 +1,5 @@
 const { User, Role, UserProfile, Address } = require("../models");
-const { Op, fn, col } = require("sequelize");
+const { Op, fn, col, where } = require("sequelize");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
 const applyDateFilter = require("../common/dateFilter");
@@ -338,6 +338,8 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+
+
 exports.combine = async (req, res) => {
   try {
     const {
@@ -346,6 +348,8 @@ exports.combine = async (req, res) => {
       sortOrder = "desc",
       page = 1,
       limit = 5,
+      date,
+      dateField,
     } = req.query;
 
     const offset = (page - 1) * limit;
@@ -360,12 +364,37 @@ exports.combine = async (req, res) => {
       ];
     }
 
-    
-    const dateCondition = applyDateFilter(req.query);
-    if (dateCondition) {
-      whereCondition[Op.and] = whereCondition[Op.and]
-        ? [...whereCondition[Op.and], dateCondition]
-        : [dateCondition];
+    if (date) {
+      let formattedDate = date;
+
+      if (formattedDate.includes("/")) {
+        formattedDate = formattedDate.replace(/\//g, "-");
+      }
+
+     
+      if (/^\d{1,2}$/.test(formattedDate)) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        const d = String(formattedDate).padStart(2, "0");
+        formattedDate = `${y}-${m}-${d}`;
+      }
+
+      const ALLOWED_DATE_FIELDS = [
+        "created_at",
+        "updated_at",
+        "joining_date",
+      ];
+
+      const actualDateField = ALLOWED_DATE_FIELDS.includes(dateField)
+        ? dateField
+        : "created_at";
+
+      whereCondition[Op.and] = whereCondition[Op.and] || [];
+
+      whereCondition[Op.and].push(
+        where(fn("DATE", col(`User.${actualDateField}`)), formattedDate)
+      );
     }
 
    
@@ -422,6 +451,7 @@ exports.combine = async (req, res) => {
     return response.error(res, "Database error", 500);
   }
 };
+
 
 
 exports.getAllusers = async (req, res) => {

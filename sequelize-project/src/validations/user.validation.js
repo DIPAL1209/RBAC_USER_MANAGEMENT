@@ -84,7 +84,7 @@ exports.createUserSchema = Joi.object({
       "number.integer": "Experience must be a whole number"
     }),
 
-  // ✅ FIX: Add addresses validation
+  
   addresses: Joi.array()
     .items(
       Joi.object({
