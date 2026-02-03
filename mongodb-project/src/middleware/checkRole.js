@@ -1,7 +1,8 @@
-const { User, Role } = require("../models");
+const mongoose = require("mongoose");
+const User  = require("../models/user");
 const response = require("../common/response");
 
-module.exports = (requiredRole) => {
+module.exports = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
       const userId = req.headers.userid;
@@ -10,25 +11,28 @@ module.exports = (requiredRole) => {
         return response.error(res, "User id missing in header", 401);
       }
 
-      const user = await User.findByPk(userId, {
-        include: {
-          model: Role,
-          as: "role",
-          attributes: ["role_name"],
-        },
-      });
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return response.error(res, "Invalid user id in header", 400);
+      }
+
+      const user = await User.findById(userId).populate("role");
 
       if (!user) {
         return response.error(res, "User not found", 404);
       }
 
-      if (user.role.role_name !== requiredRole) {
-        return response.error(res, "Only Admin can perform this action", 403);
+      if (!user.role || !allowedRoles.includes(user.role.role_name)) {
+        return response.error(
+          res,
+          "Only Admin or Main Admin can perform this action",
+          403
+        );
       }
 
       next();
     } catch (error) {
-      return response.error(res, "Database error", 500);
+      console.error("ROLE CHECK ERROR", error.message);
+      return response.error(res, error.message, 500);
     }
   };
 };

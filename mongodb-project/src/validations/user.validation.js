@@ -187,3 +187,20 @@ exports.getAllUsersSchema = Joi.object({
   sortBy: Joi.string().valid("name", "email", "createdAt", "updatedAt").optional(),
   sortOrder: Joi.string().valid("asc", "desc").optional(),
 });
+
+exports.createEmploymentSchema = Joi.object({
+  user: objectId.required(),
+  company_name: Joi.string().required(),
+  department: Joi.string().required(),
+  employment_type: Joi.string()
+    .valid("full-time", "part-time", "internship", "contract")
+    .required(),
+});
+
+
+exports.createProjectSchema = Joi.object({
+  employment: objectId.required(),
+  project_name: Joi.string().required(),
+  client_name: Joi.string().optional(),
+  technologies: Joi.array().items(Joi.string()).min(1).required(),
+});

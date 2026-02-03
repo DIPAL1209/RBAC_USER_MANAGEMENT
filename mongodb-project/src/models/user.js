@@ -1,15 +1,5 @@
 const mongoose = require("mongoose");
 
-const addressSchema = new mongoose.Schema(
-  {
-    city: {
-      type: String,
-      required: true,
-    },
-  },
-  { _id: false } 
-);
-
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -41,30 +31,25 @@ const userSchema = new mongoose.Schema(
 
     phone: {
       type: String,
-      maxlength: 15,
+      maxlength: 10,
     },
 
     profile_image: {
       type: String,
+      default: null,
     },
 
-    salary: {
-      type: Number,
-    },
+    salary: Number,
+    experience_years: Number,
+    joining_date: Date,
 
-    experience_years: {
-      type: Number,
-    },
-
-    joining_date: {
-      type: Date,
-    },
-
-    addresses: [addressSchema],
+    employments: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Employment"
+}]
   },
-  {
-    timestamps: true,
-  }
+  
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("User", userSchema);

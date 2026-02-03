@@ -23,10 +23,17 @@ router.post(
 
 router.get("/", userController.getUsers);
 
+// router.get(
+//   "/list/combine",
+//   validate(searchFilterSchema, "query"),
+//   userController.combine
+// );
+
+
 router.get(
-  "/list/combine",
-  validate(searchFilterSchema, "query"),
-  userController.combine
+  "/:id/full",
+  validate(userIdParamSchema, "params"),
+  userController.getUserFullProfile
 );
 
 router.get(
@@ -45,7 +52,7 @@ router.put(
 router.delete(
   "/:id",
   validate(userIdParamSchema, "params"),
-  checkRole("Admin"),
+  checkRole(["Admin", "Main Admin"]),
   userController.deleteUser
 );
 

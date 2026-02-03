@@ -1,23 +1,46 @@
-const User = require("../models/User.model");
-const Role = require("../models/Role.model");
+const User = require("../models/user");
+const Role = require("../models/role");
+const Employment = require("../models/employment");
+const Project = require("../models/project");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 
-
 exports.createUser = async (req, res) => {
   try {
-    const {name,email,role,status,phone,salary,joining_date,experience_years,addresses = []} = req.body;
+    const {
+      name,
+      email,
+      role,
+      status,
+      phone,
+      salary,
+      joining_date,
+      experience_years,
+      addresses = [],
+    } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(role)) {
+      return response.error(res, "Invalid role", 400);
+    }
 
     const roleExists = await Role.findById(role);
     if (!roleExists) {
       return response.error(res, "Invalid role", 400);
     }
 
-    const user = await User.create({name,email,role,status,phone,salary,joining_date,experience_years,addresses,
+    const user = await User.create({
+      name,
+      email,
+      role,
+      status,
+      phone,
+      salary,
+      joining_date,
+      experience_years,
+      addresses,
     });
 
     const result = await User.findById(user._id).populate("role");
@@ -28,7 +51,6 @@ exports.createUser = async (req, res) => {
     return response.error(res, "Database error", 500);
   }
 };
-
 
 exports.updateUser = async (req, res) => {
   try {
@@ -47,11 +69,9 @@ exports.updateUser = async (req, res) => {
       }
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true }
-    ).populate("role");
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    }).populate("role");
 
     if (!user) {
       return response.error(res, "User not found", 404);
@@ -63,7 +83,6 @@ exports.updateUser = async (req, res) => {
     return response.error(res, "Database error", 500);
   }
 };
-
 
 exports.getUsers = async (req, res) => {
   try {
@@ -97,6 +116,44 @@ exports.getUsersid = async (req, res) => {
   }
 };
 
+
+exports.getUserFullProfile = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return response.error(res, "Invalid user id", 400);
+    }
+
+    const user = await User.findById(userId)
+      .populate("role")
+      .populate({
+        path: "employments",
+        populate: {
+          path: "projects",
+        },
+      });
+
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    return response.success(
+      res,
+      "User full profile fetched successfully",
+      user
+    );
+
+  } catch (error) {
+    console.error("GET FULL USER ERROR:", error);
+    return response.error(res, "Database error", 500);
+  }
+};
+
+
+
+
+
 exports.assignRole = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -117,7 +174,7 @@ exports.assignRole = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { role },
-      { new: true }
+      { new: true },
     ).populate("role");
 
     if (!user) {
@@ -134,7 +191,6 @@ exports.assignRole = async (req, res) => {
     return response.error(res, "Database error", 500);
   }
 };
-
 
 exports.deleteUser = async (req, res) => {
   try {
@@ -155,3 +211,131 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+exports.uploadProfile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return response.error(res, "Profile image is required", 400);
+    }
+
+    const imagePath = req.file.path.replace(/\\/g, "/");
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { profile_image: imagePath },
+      { new: true },
+    );
+
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    return response.success(res, "Profile uploaded", {
+      profile_image: req.file.filename,
+      profile_url: buildImageUrl(req, req.file.filename),
+    });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.deleteprofile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return response.error(res, "User not found", 404);
+
+    if (user.profile_image) {
+      const filePath = path.join("uploads", user.profile_image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    user.profile_image = null;
+    await user.save();
+
+    return response.success(res, "Profile deleted successfully");
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("profile_image");
+
+    if (!user) return response.error(res, "User not found", 404);
+
+    return response.success(res, "Profile fetched", {
+      profile: user.profile_image,
+      profile_url: buildImageUrl(req, user.profile_image),
+    });
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.getAllusers = async (req, res) => {
+  try {
+    const users = await User.find({ status: "active" })
+      .sort({ _id: 1 })
+      .populate("role");
+
+    return response.success(res, "Active users fetched successfully", users);
+  } catch (error) {
+    console.error(error);
+    return response.error(res, "Server error", 500);
+  }
+};
+
+exports.createEmployment = async (req, res) => {
+  try {
+    const { user, company_name, department, employment_type } = req.body;
+
+    const userExists = await User.findById(user);
+    if (!userExists) {
+      return response.error(res, "User not found", 404);
+    }
+
+    const employment = await Employment.create({
+      user,
+      company_name,
+      department,
+      employment_type,
+    });
+
+    return response.success(
+      res,
+      "Employment created successfully",
+      employment,
+      201,
+    );
+  } catch (error) {
+    console.error("CREATE EMPLOYMENT ERROR:", error);
+    return response.error(res, "Database error", 500);
+  }
+};
+
+exports.createProject = async (req, res) => {
+  try {
+    const { employment, project_name, client_name, technologies } = req.body;
+
+    if (!Array.isArray(technologies) || technologies.length === 0) {
+      return response.error(res, "Technologies must be a non-empty array", 400);
+    }
+
+    const employmentExists = await Employment.findById(employment);
+    if (!employmentExists) {
+      return response.error(res, "Employment not found", 404);
+    }
+
+    const project = await Project.create({
+      employment,
+      project_name,
+      client_name,
+      technologies,
+    });
+
+    return response.success(res, "Project created successfully", project, 201);
+  } catch (error) {
+    console.error("CREATE PROJECT ERROR:", error);
+    return response.error(res, "Database error", 500);
+  }
+};

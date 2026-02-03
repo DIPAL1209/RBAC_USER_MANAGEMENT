@@ -10,7 +10,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const allowedTypes = ["image/jpeg", "photo/png", "image/jpg", "image/webp"];
+const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 
 const upload = multer({
   storage,

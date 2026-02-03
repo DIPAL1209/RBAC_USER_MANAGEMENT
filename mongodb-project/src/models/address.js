@@ -5,14 +5,17 @@ const addressSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
-    city: String,
-    state: String,
-    country: String,
-    pincode: String
+
+    city: {
+      type: String,
+      required: true,
+    },
   },
-  { timestamps: true }
+  { 
+    timestamps: true 
+  }
 );
 
 module.exports = mongoose.model("Address", addressSchema);
