@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const employmentSchema = new mongoose.Schema(
   {
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -25,13 +25,18 @@ const employmentSchema = new mongoose.Schema(
       enum: ["full-time", "part-time", "internship", "contract"],
       required: true,
     },
-    projects: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Project"
-}],
-
+    
+    projects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Project",
+      },
+    ],
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 );
 
 module.exports = mongoose.model("Employment", employmentSchema);

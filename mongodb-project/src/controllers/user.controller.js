@@ -2,11 +2,13 @@ const User = require("../models/user");
 const Role = require("../models/role");
 const Employment = require("../models/employment");
 const Project = require("../models/project");
+const Address = require("../models/address");
 const response = require("../common/response");
 const { buildImageUrl } = require("../common/url.helper");
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
+
 
 exports.createUser = async (req, res) => {
   try {
@@ -28,7 +30,7 @@ exports.createUser = async (req, res) => {
 
     const roleExists = await Role.findById(role);
     if (!roleExists) {
-      return response.error(res, "Invalid role", 400);
+      return response.error(res, "Role not found", 404);
     }
 
     const user = await User.create({
@@ -62,6 +64,9 @@ exports.updateUser = async (req, res) => {
 
     const updateData = { ...req.body };
 
+    delete updateData.addresses;
+    delete updateData.employments;
+
     if (updateData.role) {
       const roleExists = await Role.findById(updateData.role);
       if (!roleExists) {
@@ -84,9 +89,36 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return response.error(res, "Invalid user id", 400);
+    }
+
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    return response.success(res, "User deleted successfully");
+  } catch (error) {
+    return response.error(res, "Database error", 500);
+  }
+};
+
+
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().populate("role");
+    const users = await User.find()
+      .populate("role")
+      .populate({
+        path: "employments",  
+        populate: {
+          path: "projects",    
+        },
+      });
 
     return response.success(res, "Users fetched successfully", users);
   } catch (error) {
@@ -116,7 +148,6 @@ exports.getUsersid = async (req, res) => {
   }
 };
 
-
 exports.getUserFullProfile = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -128,9 +159,9 @@ exports.getUserFullProfile = async (req, res) => {
     const user = await User.findById(userId)
       .populate("role")
       .populate({
-        path: "employments",
+        path: "employments",  
         populate: {
-          path: "projects",
+          path: "projects",    
         },
       });
 
@@ -143,15 +174,30 @@ exports.getUserFullProfile = async (req, res) => {
       "User full profile fetched successfully",
       user
     );
-
   } catch (error) {
     console.error("GET FULL USER ERROR:", error);
     return response.error(res, "Database error", 500);
   }
 };
 
+exports.getAllusers = async (req, res) => {
+  try {
+    const users = await User.find({ status: "active" })
+      .sort({ _id: 1 })
+      .populate("role")
+      .populate({
+        path: "employments",
+        populate: {
+          path: "projects",
+        },
+      });
 
-
+    return response.success(res, "Active users fetched successfully", users);
+  } catch (error) {
+    console.error(error);
+    return response.error(res, "Server error", 500);
+  }
+};
 
 
 exports.assignRole = async (req, res) => {
@@ -174,7 +220,7 @@ exports.assignRole = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { role },
-      { new: true },
+      { new: true }
     ).populate("role");
 
     if (!user) {
@@ -192,24 +238,6 @@ exports.assignRole = async (req, res) => {
   }
 };
 
-exports.deleteUser = async (req, res) => {
-  try {
-    const userId = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return response.error(res, "Invalid user id", 400);
-    }
-
-    const user = await User.findByIdAndDelete(userId);
-    if (!user) {
-      return response.error(res, "User not found", 404);
-    }
-
-    return response.success(res, "User deleted successfully");
-  } catch (error) {
-    return response.error(res, "Database error", 500);
-  }
-};
 
 exports.uploadProfile = async (req, res) => {
   try {
@@ -222,7 +250,7 @@ exports.uploadProfile = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { profile_image: imagePath },
-      { new: true },
+      { new: true }
     );
 
     if (!user) {
@@ -272,40 +300,35 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-exports.getAllusers = async (req, res) => {
-  try {
-    const users = await User.find({ status: "active" })
-      .sort({ _id: 1 })
-      .populate("role");
-
-    return response.success(res, "Active users fetched successfully", users);
-  } catch (error) {
-    console.error(error);
-    return response.error(res, "Server error", 500);
-  }
-};
 
 exports.createEmployment = async (req, res) => {
   try {
-    const { user, company_name, department, employment_type } = req.body;
+    const { userId } = req.params;
+    const { company_name, department, employment_type } = req.body;
 
-    const userExists = await User.findById(user);
-    if (!userExists) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return response.error(res, "Invalid user ID", 400);
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
       return response.error(res, "User not found", 404);
     }
 
     const employment = await Employment.create({
-      user,
+      userId,
       company_name,
       department,
       employment_type,
     });
 
+    const result = await Employment.findById(employment._id).populate("userId", "name email");
+
     return response.success(
       res,
       "Employment created successfully",
-      employment,
-      201,
+      result,
+      201
     );
   } catch (error) {
     console.error("CREATE EMPLOYMENT ERROR:", error);
@@ -315,27 +338,37 @@ exports.createEmployment = async (req, res) => {
 
 exports.createProject = async (req, res) => {
   try {
-    const { employment, project_name, client_name, technologies } = req.body;
+    const { employmentId } = req.params;
+    const { project_name, client_name, technologies } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(employmentId)) {
+      return response.error(res, "Invalid employment ID", 400);
+    }
 
     if (!Array.isArray(technologies) || technologies.length === 0) {
       return response.error(res, "Technologies must be a non-empty array", 400);
     }
 
-    const employmentExists = await Employment.findById(employment);
-    if (!employmentExists) {
+    const employment = await Employment.findById(employmentId);
+    if (!employment) {
       return response.error(res, "Employment not found", 404);
     }
 
+  
     const project = await Project.create({
-      employment,
+      employment: employmentId,
       project_name,
       client_name,
       technologies,
     });
+
+
+    employment.projects.push(project._id);
+    await employment.save();
 
     return response.success(res, "Project created successfully", project, 201);
   } catch (error) {
     console.error("CREATE PROJECT ERROR:", error);
     return response.error(res, "Database error", 500);
   }
-};
+}; 

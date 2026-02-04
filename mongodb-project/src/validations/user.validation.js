@@ -189,7 +189,7 @@ exports.getAllUsersSchema = Joi.object({
 });
 
 exports.createEmploymentSchema = Joi.object({
-  user: objectId.required(),
+  userId: objectId.required(),
   company_name: Joi.string().required(),
   department: Joi.string().required(),
   employment_type: Joi.string()

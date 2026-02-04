@@ -24,7 +24,9 @@ const projectSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true,
+     versionKey:false,
+   }
 );
 
 module.exports = mongoose.model("Project", projectSchema);

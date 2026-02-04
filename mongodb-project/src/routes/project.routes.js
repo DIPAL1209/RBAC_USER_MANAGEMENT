@@ -3,6 +3,6 @@ const router = express.Router();
 
 const controller = require("../controllers/user.controller");
 
-router.post("/", controller.createProject);
+router.post("/:employmentId", controller.createProject);
 
 module.exports = router;

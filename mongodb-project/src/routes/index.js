@@ -9,7 +9,7 @@ router.use("/users", userRoutes);
 router.use("/roles", roleRoutes);
 
 
-router.use("/employments", employRoutes);
+router.use("/users", employRoutes);
 router.use("/projects", projectRoutes);
 
 module.exports = router;

@@ -11,7 +11,6 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 app.use("/api", require("./src/routes"));
 
-app.use("/api", routes);
 
 app.listen(process.env.PORT, () => {
   console.log("Server running on port", process.env.PORT);

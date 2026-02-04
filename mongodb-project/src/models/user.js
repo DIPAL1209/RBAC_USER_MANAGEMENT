@@ -43,13 +43,33 @@ const userSchema = new mongoose.Schema(
     experience_years: Number,
     joining_date: Date,
 
-    employments: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Employment"
-}]
+    addresses: [
+      {
+        _id: false,
+        city: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+      },
+    ],
+
+
   },
-  
-  { timestamps: true }
+
+  { 
+    timestamps: true, 
+    versionKey: false,
+    toJSON: { virtuals: true },  
+    toObject: { virtuals: true }  
+  }
 );
+
+
+userSchema.virtual("employments", {
+  ref: "Employment",
+  localField: "_id",
+  foreignField: "userId",
+});
 
 module.exports = mongoose.model("User", userSchema);
