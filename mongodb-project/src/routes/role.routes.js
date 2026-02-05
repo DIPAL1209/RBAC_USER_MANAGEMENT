@@ -9,22 +9,13 @@ const {
   roleIdParamSchema,
 } = require("../validations/role.validation");
 
-
 router.post(
   "/",
   validate(createRoleSchema, "body"),
   roleController.createRole
 );
 
-
 router.get("/", roleController.getRoles);
-
-router.get(
-  "/:id",
-  validate(roleIdParamSchema, "params"),
-  roleController.getRoleById
-);
-
 
 router.put(
   "/:id",
@@ -32,7 +23,6 @@ router.put(
   validate(updateRoleSchema, "body"),
   roleController.updateRole
 );
-
 
 router.delete(
   "/:id",

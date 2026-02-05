@@ -1,5 +1,6 @@
 const Role = require("../models/role");
 const User = require("../models/user");
+const {applySearch,applySort,applyPagination} = require("../common/apiLogic");
 const response = require("../common/response");
 const mongoose = require("mongoose");
 
@@ -33,24 +34,35 @@ exports.getRoles = async (req, res) => {
 };
 
 
-exports.getRoleById = async (req, res) => {
+exports.getRoles = async (req, res) => {
   try {
-    const roleId = req.params.id;
+    let query = Role.find();
 
-    if (!mongoose.Types.ObjectId.isValid(roleId)) {
-      return response.error(res, "Invalid role id", 400);
-    }
+    query = applySearch(query, req.query, ["role_name"]);
+    query = applySort(query, req.query);
 
-    const role = await Role.findById(roleId);
-    if (!role) {
-      return response.error(res, "Role not found", 404);
-    }
+    const { query: pagedQuery, page, limit } =
+      applyPagination(query, req.query);
 
-    return response.success(res, "Role fetched successfully", role);
+    const [roles, total] = await Promise.all([
+      pagedQuery,
+      Role.countDocuments(),
+    ]);
+
+    return response.success(res, "Roles fetched successfully", {
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      data: roles,
+    });
   } catch (error) {
     return response.error(res, "Database error", 500);
   }
-};
+};;
+
 
 exports.updateRole = async (req, res) => {
   try {

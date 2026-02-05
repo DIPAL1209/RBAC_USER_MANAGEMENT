@@ -25,18 +25,21 @@ const employmentSchema = new mongoose.Schema(
       enum: ["full-time", "part-time", "internship", "contract"],
       required: true,
     },
-    
-    projects: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Project",
-      },
-    ],
+
   },
   {
     timestamps: true,
     versionKey: false,
-  }
+    id: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
+
+employmentSchema.virtual("projects", {
+  ref: "Project",
+  localField: "_id",
+  foreignField: "employment",
+});
 
 module.exports = mongoose.model("Employment", employmentSchema);

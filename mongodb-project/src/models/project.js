@@ -24,7 +24,7 @@ const projectSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true,
+  { timestamps: false,
      versionKey:false,
    }
 );

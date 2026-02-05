@@ -11,8 +11,8 @@ const {
   assignRoleSchema,
   userIdParamSchema,
   searchFilterSchema,
-  getAllUsersSchema,
 } = require("../validations/user.validation");
+
 
 router.post(
   "/",
@@ -20,26 +20,16 @@ router.post(
   userController.createUser
 );
 
-
-router.get("/", userController.getUsers);
-
-// router.get(
-//   "/list/combine",
-//   validate(searchFilterSchema, "query"),
-//   userController.combine
-// );
-
+router.get(
+  "/",
+  validate(searchFilterSchema, "query"),
+  userController.getUsers
+);
 
 router.get(
   "/:id/full",
   validate(userIdParamSchema, "params"),
   userController.getUserFullProfile
-);
-
-router.get(
-  "/:id",
-  validate(userIdParamSchema, "params"),
-  userController.getUsersid
 );
 
 router.put(
@@ -81,11 +71,4 @@ router.delete(
   validate(userIdParamSchema, "params"),
   userController.deleteprofile
 );
-
-router.get(
-  "/all",
-  validate(getAllUsersSchema, "query"),
-  userController.getAllusers
-);
-
 module.exports = router;

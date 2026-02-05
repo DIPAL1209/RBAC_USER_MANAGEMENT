@@ -1,15 +1,9 @@
-const router = require("express").Router();
+const express = require("express");
+const router = express.Router();
 
-const userRoutes = require("./user.routes");
-const roleRoutes = require("./role.routes");
-const employRoutes = require("./employ.routes");   
-const projectRoutes = require("./project.routes"); 
-
-router.use("/users", userRoutes);
-router.use("/roles", roleRoutes);
-
-
-router.use("/users", employRoutes);
-router.use("/projects", projectRoutes);
+router.use("/users", require("./user.routes"));
+router.use("/employments", require("./employ.routes"));
+router.use("/projects", require("./project.routes"));
+router.use("/roles", require("./role.routes"));
 
 module.exports = router;
